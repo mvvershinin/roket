@@ -2,31 +2,36 @@
 
 namespace src\Integration;
 
+use src\Dtos\InputDto;
+use src\Dtos\ResponseDto;
+
+/**
+ * @property string $host
+ * @property string $user
+ * @property string $password
+ */
 class DataProvider
 {
-    private $host;
-    private $user;
-    private $password;
-
     /**
-     * @param $host
-     * @param $user
-     * @param $password
+     * @param string $host
+     * @param string $user
+     * @param string $password
      */
-    public function __construct($host, $user, $password)
+    public function __construct(
+        protected string $host,
+        protected string $user,
+        protected string $password
+    )
     {
-        $this->host = $host;
-        $this->user = $user;
-        $this->password = $password;
     }
 
     /**
-     * @param array $request
-     *
+     * @param InputDto $input
      * @return array
      */
-    public function get(array $request)
+    public function get(InputDto $input): ResponseDto
     {
         // returns a response from external service
+        return new ResponseDto();
     }
 }
