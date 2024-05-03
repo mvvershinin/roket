@@ -3,63 +3,68 @@
 namespace src\Decorator;
 
 use DateTime;
-use Exception;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use src\Integration\DataProvider;
+use src\Dtos\InputDto;
+use src\Dtos\ResponseDto;
+use Throwable;
 
-class DecoratorManager extends DataProvider
+/**
+ * @property string $host
+ * @property string $user
+ * @property string $password
+ */
+final class DecoratorManager extends DataProvider
 {
-    public $cache;
-    public $logger;
+    public const EXPIRED_PERIOD = '+1 day';
 
     /**
      * @param string $host
      * @param string $user
      * @param string $password
      * @param CacheItemPoolInterface $cache
+     * @param LoggerInterface $logger
      */
-    public function __construct($host, $user, $password, CacheItemPoolInterface $cache)
+    public function __construct(
+        protected string $host,
+        protected string $user,
+        protected string $password,
+        protected CacheItemPoolInterface $cache,
+        protected LoggerInterface $logger
+    )
     {
         parent::__construct($host, $user, $password);
-        $this->cache = $cache;
-    }
-
-    public function setLogger(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
     }
 
     /**
-     * {@inheritdoc}
+     * @param InputDto $input
+     * @return array
      */
-    public function getResponse(array $input)
+    public function getResponse(InputDto $input): ?ResponseDto
     {
         try {
-            $cacheKey = $this->getCacheKey($input);
-            $cacheItem = $this->cache->getItem($cacheKey);
+            $cacheItem = $this->cache->getItem(
+                $input->getCacheKey()
+            );
             if ($cacheItem->isHit()) {
+                // Должен вернуть ResponseDto
                 return $cacheItem->get();
             }
 
-            $result = parent::get($input);
+            $result = $this->get($input);
 
             $cacheItem
                 ->set($result)
                 ->expiresAt(
-                    (new DateTime())->modify('+1 day')
+                    (new DateTime())->modify(self::EXPIRED_PERIOD)
                 );
 
             return $result;
-        } catch (Exception $e) {
-            $this->logger->critical('Error');
+        } catch (Throwable $e) {
+            $this->logger->critical('Error', $e);
         }
 
-        return [];
-    }
-
-    public function getCacheKey(array $input)
-    {
-        return json_encode($input);
+        return null;
     }
 }
